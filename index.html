@@ -20,14 +20,15 @@
         <script src="https://cdn.babylonjs.com/babylon.js"></script>
         <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
         <script src="https://code.jquery.com/pep/0.4.3/pep.js"></script>
+        <!-- Cannon Physics Engine -->
+        <script src="https://cdn.babylonjs.com/cannon.js"></script>
+        
     </head>
-   <body>
-    <canvas id="renderCanvas" touch-action="none"></canvas> <!-- touch-action="none" for best results from PEP -->
-    <script>
+    <body>
+        <canvas id="renderCanvas" touch-action="none"></canvas> <!-- touch-action="none" for best results from PEP -->
+        <script>
         const canvas = document.getElementById("renderCanvas"); // Get the canvas element
         const engine = new BABYLON.Engine(canvas, true); // Generate the BABYLON 3D engine
-
-
 
         // Add your code here matching the playground format
         const createScene =  () => {
@@ -35,18 +36,76 @@
         const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.5, 3, new BABYLON.Vector3(0, 0, 0));
         //const camera = new BABYLON.UniversalCamera("viewCamera", new BABYLON.Vector3(0, 3, -3), scene);
         camera.attachControl(canvas, true);
-        const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0));
+
+        // enable physics
+        scene.enablePhysics();
+
+        // light
+        const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 20, 0));
+
+        // objects
         const box = BABYLON.MeshBuilder.CreateBox("box", {});
         const cap = BABYLON.MeshBuilder.CreateCapsule("cap1", {height: 2, radius: 0.25, subdivisions: 12});
         cap.position = new BABYLON.Vector3(1, 0, 3);
+        const ground = BABYLON.MeshBuilder.CreateGround("theground", {width:10, height:10});
+        ground.position = new BABYLON.Vector3(0, -2, 0);
+        //models
+        BABYLON.SceneLoader.ImportMeshAsync("", "http://localhost:8000/", "Logo.gltf.glb").then((result) => {
+            result.meshes[0].position = new BABYLON.Vector3(5, 5, 0);
+            result.meshes[0].name = "logo"
+            const logo = scene.getMeshByName("logo");
+            console.log(scene.getMeshByName("logo"))
+            //logo.position = new BABYLON.Vector3(5, 5, 0);
+            logo.rotation.y = Math.PI / 2;
+        });
+
+        // BABYLON.SceneLoader.Append("http://localhost:8000/", "Logo.gltf.glb", scene, function (scene) {
+        // // Create a default arc rotate camera and light.
+        // scene.createDefaultCameraOrLight(true, true, true);
+
+        // // The default camera looks at the back of the asset.
+        // // Rotate the camera by 180 degrees to the front of the asset.
+        // });
+
+        // need material for colors
+        const groundMat = new BABYLON.StandardMaterial("groundMat", scene);
+        groundMat.diffuseColor = new BABYLON.Color3(1, 0.5, 0.2)
+        ground.material = groundMat;
+
+        // physics objects/impostors
+        box.physicsImpostor = new BABYLON.PhysicsImpostor(box, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 1, restitution: 0.9 }, scene);
+        cap.physicsImpostor = new BABYLON.PhysicsImpostor(cap, BABYLON.PhysicsImpostor.CylinderImpostor, { mass: 1, restitution: 0.9 }, scene);
+        ground.physicsImpostor = new BABYLON.PhysicsImpostor(ground, BABYLON.PhysicsImpostor.BoxImpostor, {mass: 0, restitution: 0.9}, scene)
+        //const logo = scene.getMeshByName("logo");
+        //logo.physicsImpostor = new BABYLON.PhysicsImpostor(logo, BABYLON.PhysicsImpostor.BoxImpostor, {mass: 0.5, restitution: 0.9}, scene);
+        //logo.physicsImpostor = new BABYLON.PhysicsImpostor(ground, BABYLON.PhysicsImpostor.BoxImpostor, {mass: 0, restitution: 0.9}, scene)
+
+        // testing click pick
+        let impulseDirection = new BABYLON.Vector3(0, 1, 0);
+        scene.onPointerDown = function (evt, pickResult) {
+            if (pickResult.pickedMesh ) {
+                console.log("event: ", evt, "pickResult: ", pickResult)
+                let mousePos = new BABYLON.Vector3(evt.x, evt.y, );
+                console.log("mousePos: ", mousePos)
+                //pickResult.pickedMesh.physicsImpostor.applyImpulse(impulseDirection.scale(2), pickResult.pickedPoint)
+                // testing impulse direction using ray
+                console.log("ray length: ", pickResult.ray.length);
+                pickResult.pickedMesh.physicsImpostor.applyImpulse(pickResult.ray.direction.scale(3), pickResult.pickedPoint)
+            }
+        }
+        
+
 
         // scene interactions, mouse/pointer
-            scene.onPointerObservable.add((pointerInfo) => {
+        /*
+        scene.onPointerObservable.add((pointerInfo) => {
 		switch (pointerInfo.type) {
 			case BABYLON.PointerEventTypes.POINTERDOWN:
 				console.log("POINTER DOWN");
+
                 // cast a ray
-                castRay();
+                //castRay();
+
 				break;
 			case BABYLON.PointerEventTypes.POINTERUP:
 				console.log("POINTER UP");
@@ -67,10 +126,11 @@
 				console.log("POINTER DOUBLE-TAP");
 				break;
         }
-    });
+        }); // end mouse interactions
+
 
         // scene interactions, keyboard
-        	scene.onKeyboardObservable.add((kbInfo) => {
+        scene.onKeyboardObservable.add((kbInfo) => {
 		switch (kbInfo.type) {
 			case BABYLON.KeyboardEventTypes.KEYDOWN:
 				console.log("KEY DOWN: ", kbInfo.event.key);
@@ -79,7 +139,7 @@
 				console.log("KEY UP: ", kbInfo.event.keyCode);
 				break;
 		}
-	});
+	    }); // end keyboard interactions */
 
 
         return scene;
@@ -96,10 +156,11 @@
                 engine.resize();
         });
    
-        function castRay() {
-            const ray = scene.createPickingRay(scene.pointerX, scene.pointerY, BABYLON)
-        }
+        // function castRay() {
+        //     const ray = scene.createPickingRay(scene.pointerX, scene.pointerY, BABYLON)
+        // }
 
-    </script>
+
+        </script>
    </body>
 </html>
